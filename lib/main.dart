@@ -48,7 +48,7 @@ class ScoreScreen extends StatefulWidget {
 }
 
 class _ScoreScreenState extends State<ScoreScreen> {
-  // App State
+  // Active App State
   String _teamAName = 'NOSOTROS';
   String _teamBName = 'ELLOS';
   int _targetScore = 200;
@@ -57,6 +57,13 @@ class _ScoreScreenState extends State<ScoreScreen> {
   List<ScoreEntry> _scores = [];
 
   bool _hasVibratedForCurrentWin = false;
+
+  // Archived Previous Match State (for History / Restore features)
+  List<ScoreEntry> _prevScores = [];
+  String _prevTeamAName = 'NOSOTROS';
+  String _prevTeamBName = 'ELLOS';
+  String _prevWinner = ''; // 'A' or 'B'
+  bool _hasPrevMatch = false;
 
   @override
   void initState() {
@@ -82,6 +89,20 @@ class _ScoreScreenState extends State<ScoreScreen> {
               .map((item) => ScoreEntry.fromMap(item as Map<String, dynamic>))
               .toList();
         }
+
+        // Load previous match data
+        _prevTeamAName = prefs.getString('prevTeamAName') ?? 'NOSOTROS';
+        _prevTeamBName = prefs.getString('prevTeamBName') ?? 'ELLOS';
+        _prevWinner = prefs.getString('prevWinner') ?? '';
+        _hasPrevMatch = prefs.getBool('hasPrevMatch') ?? false;
+
+        final prevScoresJson = prefs.getString('prevScoresList');
+        if (prevScoresJson != null) {
+          final decoded = jsonDecode(prevScoresJson) as List;
+          _prevScores = decoded
+              .map((item) => ScoreEntry.fromMap(item as Map<String, dynamic>))
+              .toList();
+        }
       });
       _checkWinCondition(vibrate: false);
     } catch (e) {
@@ -101,6 +122,15 @@ class _ScoreScreenState extends State<ScoreScreen> {
       
       final scoresMap = _scores.map((e) => e.toMap()).toList();
       await prefs.setString('scoresList', jsonEncode(scoresMap));
+
+      // Save previous match data
+      await prefs.setString('prevTeamAName', _prevTeamAName);
+      await prefs.setString('prevTeamBName', _prevTeamBName);
+      await prefs.setString('prevWinner', _prevWinner);
+      await prefs.setBool('hasPrevMatch', _hasPrevMatch);
+
+      final prevScoresMap = _prevScores.map((e) => e.toMap()).toList();
+      await prefs.setString('prevScoresList', jsonEncode(prevScoresMap));
     } catch (e) {
       debugPrint("Error saving state: $e");
     }
@@ -114,8 +144,6 @@ class _ScoreScreenState extends State<ScoreScreen> {
   int get _totalB => _scores
       .where((e) => !e.isDeleted)
       .fold(0, (sum, item) => sum + item.scoreB);
-
-  bool get _isGameOver => _totalA >= _targetScore || _totalB >= _targetScore;
 
   // Add Score Entry
   void _addScore(int points, bool isTeamA) {
@@ -168,137 +196,294 @@ class _ScoreScreenState extends State<ScoreScreen> {
     }
   }
 
-  // Show winning dialog and add victory (Matches user's screenshot)
+  // Show winning dialog (Simple flow, increments victories immediately and resets hand on close)
   void _showWinDialog(String winnerTeam) {
     final isTeamA = winnerTeam == _teamAName;
+    
+    setState(() {
+      // 1. Archive current game state before resetting
+      _prevScores = List<ScoreEntry>.from(_scores);
+      _prevTeamAName = _teamAName;
+      _prevTeamBName = _teamBName;
+      _prevWinner = isTeamA ? 'A' : 'B';
+      _hasPrevMatch = true;
 
-    showDialog<bool>(
+      // 2. Increment victories immediately
+      if (isTeamA) {
+        _winsA++;
+      } else {
+        _winsB++;
+      }
+    });
+    _saveState();
+
+    // 3. Show simple custom congratulatory dialog (tap-to-dismiss)
+    showDialog(
       context: context,
       barrierDismissible: true,
       builder: (context) {
         return Dialog(
           backgroundColor: Colors.transparent,
           insetPadding: const EdgeInsets.symmetric(horizontal: 40),
-          child: Container(
-            padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 24),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Color(0xFF8B5CF6), // Purple
-                  Color(0xFFD946EF), // Magenta
-                  Color(0xFFEF4444), // Red
-                ],
-              ),
-              borderRadius: BorderRadius.circular(28),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.3),
-                  blurRadius: 20,
-                  offset: const Offset(0, 10),
-                ),
-              ],
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(
-                  Icons.emoji_events,
-                  color: Color(0xFFFFD700), // Gold Trophy
-                  size: 80,
-                ),
-                const SizedBox(height: 24),
-                const Text(
-                  '¡FELICIDADES!',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white70,
-                    letterSpacing: 2.0,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  winnerTeam.toUpperCase(),
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 38,
-                    fontWeight: FontWeight.w900,
-                    color: Colors.white,
-                    letterSpacing: 1.2,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                const Text(
-                  'HA GANADO LA PARTIDA',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                    letterSpacing: 1.5,
-                  ),
-                ),
-                const SizedBox(height: 28),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    // HISTORIAL Button (Cancel victory and return to review history/fix errors)
-                    TextButton(
-                      onPressed: () => Navigator.of(context).pop(false),
-                      style: TextButton.styleFrom(
-                        foregroundColor: Colors.white.withOpacity(0.8),
-                      ),
-                      child: const Text(
-                        'HISTORIAL',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 1.0,
-                        ),
-                      ),
-                    ),
-                    // NUEVA PARTIDA Button (Accept victory and reset)
-                    ElevatedButton(
-                      onPressed: () => Navigator.of(context).pop(true),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor: const Color(0xFF7C3AED),
-                        elevation: 0,
-                        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(100),
-                        ),
-                      ),
-                      child: const Text(
-                        'NUEVA PARTIDA',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 0.5,
-                        ),
-                      ),
-                    ),
+          child: GestureDetector(
+            onTap: () => Navigator.of(context).pop(),
+            behavior: HitTestBehavior.opaque,
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 24),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Color(0xFF8B5CF6), // Purple
+                    Color(0xFFD946EF), // Magenta
+                    Color(0xFFEF4444), // Red
                   ],
                 ),
-              ],
+                borderRadius: BorderRadius.circular(28),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.3),
+                    blurRadius: 20,
+                    offset: const Offset(0, 10),
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.emoji_events,
+                    color: Color(0xFFFFD700), // Gold Trophy
+                    size: 80,
+                  ),
+                  const SizedBox(height: 24),
+                  const Text(
+                    '¡FELICIDADES!',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white70,
+                      letterSpacing: 2.0,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    winnerTeam.toUpperCase(),
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 38,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.white,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'HA GANADO LA PARTIDA',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                      letterSpacing: 1.5,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         );
       },
-    ).then((confirmedWin) {
-      if (confirmedWin == true) {
-        setState(() {
-          if (isTeamA) {
-            _winsA++;
-          } else {
-            _winsB++;
-          }
-        });
-        _saveState();
-        _resetHandOnly();
-      }
+    ).then((_) {
+      // 4. Reset points of current hand upon closing dialog
+      _resetHandOnly();
     });
+  }
+
+  // Show previous match details and restore options
+  void _showPreviousMatchDialog() {
+    final prevTotalA = _prevScores
+        .where((e) => !e.isDeleted)
+        .fold(0, (sum, item) => sum + item.scoreA);
+    final prevTotalB = _prevScores
+        .where((e) => !e.isDeleted)
+        .fold(0, (sum, item) => sum + item.scoreB);
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+          title: const Row(
+            children: [
+              Icon(Icons.history, color: Color(0xFF7C3AED)),
+              SizedBox(width: 8),
+              Text(
+                'Partida Anterior',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Summary row
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  Column(
+                    children: [
+                      Text(
+                        _prevTeamAName,
+                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF0F3CC9)),
+                      ),
+                      Text(
+                        '$prevTotalA pts',
+                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: Color(0xFF0F3CC9)),
+                      ),
+                    ],
+                  ),
+                  const Text('vs', style: TextStyle(fontSize: 16, color: Colors.black38)),
+                  Column(
+                    children: [
+                      Text(
+                        _prevTeamBName,
+                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF9E0B24)),
+                      ),
+                      Text(
+                        '$prevTotalB pts',
+                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: Color(0xFF9E0B24)),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              const Divider(height: 1, color: Color(0xFFE5E7EB)),
+              const SizedBox(height: 8),
+              // Details list
+              Container(
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(context).size.height * 0.3,
+                ),
+                width: double.maxFinite,
+                child: _prevScores.isEmpty
+                    ? const Center(child: Text('Sin detalles'))
+                    : ListView.builder(
+                        shrinkWrap: true,
+                        physics: const BouncingScrollPhysics(),
+                        itemCount: _prevScores.length,
+                        itemBuilder: (context, index) {
+                          final entry = _prevScores[index];
+                          final reverseIndex = _prevScores.length - index;
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 6.0),
+                            child: Stack(
+                              alignment: Alignment.center,
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                  children: [
+                                    Text('$reverseIndex', style: const TextStyle(color: Colors.black38, fontSize: 12)),
+                                    Text(
+                                      '${entry.scoreA}',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color: entry.isDeleted
+                                            ? Colors.black26
+                                            : (entry.scoreA > 0 ? const Color(0xFF0F3CC9) : Colors.black38),
+                                      ),
+                                    ),
+                                    Text(
+                                      '${entry.scoreB}',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color: entry.isDeleted
+                                            ? Colors.black26
+                                            : (entry.scoreB > 0 ? const Color(0xFF9E0B24) : Colors.black38),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                if (entry.isDeleted)
+                                  Container(
+                                    height: 1,
+                                    color: Colors.black38,
+                                    margin: const EdgeInsets.symmetric(horizontal: 20),
+                                  ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+              ),
+            ],
+          ),
+          actionsPadding: const EdgeInsets.only(right: 16, bottom: 16),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text(
+                'CERRAR',
+                style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                _restorePreviousMatch();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFF3E8FF),
+                foregroundColor: const Color(0xFF7C3AED),
+                elevation: 0,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(100)),
+                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+              ),
+              child: const Text(
+                'RESTAURAR',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // Restore the archived match (reverts victory counter and scores)
+  void _restorePreviousMatch() {
+    setState(() {
+      _scores = List<ScoreEntry>.from(_prevScores);
+
+      // Revert wins
+      if (_prevWinner == 'A' && _winsA > 0) {
+        _winsA--;
+      } else if (_prevWinner == 'B' && _winsB > 0) {
+        _winsB--;
+      }
+
+      // Clear previous match history
+      _hasPrevMatch = false;
+      _prevScores.clear();
+      _prevWinner = '';
+      _hasVibratedForCurrentWin = true; // prevents triggering win dialog again immediately
+    });
+    _saveState();
+
+    ScaffoldMessenger.of(context).clearSnackBars();
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Se restauró la partida anterior. Puedes corregir el historial.'),
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: Color(0xFF1E293B),
+      ),
+    );
   }
 
   // Reset current scores (keep wins)
@@ -716,6 +901,17 @@ class _ScoreScreenState extends State<ScoreScreen> {
         backgroundColor: const Color(0xFFF3F4F6),
         elevation: 0,
         scrolledUnderElevation: 0,
+        // History button on the left of DOMISCORE (Matches user request)
+        leading: _hasPrevMatch
+            ? IconButton(
+                icon: const Icon(
+                  Icons.history,
+                  color: Color(0xFF475569),
+                  size: 24,
+                ),
+                onPressed: _showPreviousMatchDialog,
+              )
+            : null,
         actions: [
           // Meta Button Pill
           GestureDetector(
@@ -834,7 +1030,7 @@ class _ScoreScreenState extends State<ScoreScreen> {
                             height: 36,
                             width: 100,
                             child: ElevatedButton(
-                              onPressed: _isGameOver ? null : () => _showSumPointsDialog(true),
+                              onPressed: () => _showSumPointsDialog(true),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.white.withOpacity(0.18),
                                 foregroundColor: Colors.white,
@@ -935,7 +1131,7 @@ class _ScoreScreenState extends State<ScoreScreen> {
                             height: 36,
                             width: 100,
                             child: ElevatedButton(
-                              onPressed: _isGameOver ? null : () => _showSumPointsDialog(false),
+                              onPressed: () => _showSumPointsDialog(false),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.white.withOpacity(0.18),
                                 foregroundColor: Colors.white,
@@ -1153,37 +1349,6 @@ class _ScoreScreenState extends State<ScoreScreen> {
                               },
                             ),
                     ),
-                    if (_isGameOver)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 8.0),
-                        child: SizedBox(
-                          width: double.infinity,
-                          height: 52,
-                          child: ElevatedButton.icon(
-                            onPressed: () {
-                              final winner = _totalA >= _targetScore ? _teamAName : _teamBName;
-                              _showWinDialog(winner);
-                            },
-                            icon: const Icon(Icons.emoji_events, color: Colors.white),
-                            label: const Text(
-                              'CONFIRMAR VICTORIA',
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                                letterSpacing: 1.0,
-                              ),
-                            ),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: _totalA >= _targetScore ? const Color(0xFF1E6CDB) : const Color(0xFFD61E3C),
-                              elevation: 2,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(14),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
                     // Bottom actions row (Matches Image 1)
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 20.0),
