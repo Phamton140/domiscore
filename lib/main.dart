@@ -2,11 +2,13 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'models/score_entry.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
+  MobileAds.instance.initialize();
   SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
@@ -66,10 +68,40 @@ class _ScoreScreenState extends State<ScoreScreen> {
   String _prevWinner = ''; // 'A' or 'B'
   bool _hasPrevMatch = false;
 
+  // AdMob Banner Ad State
+  BannerAd? _bannerAd;
+  bool _isBannerAdReady = false;
+
   @override
   void initState() {
     super.initState();
     _loadState();
+    _loadBannerAd();
+  }
+
+  @override
+  void dispose() {
+    _bannerAd?.dispose();
+    super.dispose();
+  }
+
+  void _loadBannerAd() {
+    _bannerAd = BannerAd(
+      adUnitId: 'ca-app-pub-8257738486901222/1638435162',
+      request: const AdRequest(),
+      size: AdSize.banner,
+      listener: BannerAdListener(
+        onAdLoaded: (_) {
+          setState(() {
+            _isBannerAdReady = true;
+          });
+        },
+        onAdFailedToLoad: (ad, err) {
+          debugPrint('AdMob Banner failed to load: $err');
+          ad.dispose();
+        },
+      ),
+    )..load();
   }
 
   // Load state from SharedPreferences
@@ -1429,32 +1461,38 @@ class _ScoreScreenState extends State<ScoreScreen> {
               height: 60,
               color: const Color(0xFFF3F4F6),
               alignment: Alignment.center,
-              child: Container(
-                width: 320,
-                height: 50,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  border: Border.all(color: Colors.black12),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                alignment: Alignment.center,
-                child: const Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.ad_units, color: Colors.black26, size: 16),
-                    SizedBox(width: 6),
-                    Text(
-                      'ANUNCIO PUBLICITARIO',
-                      style: TextStyle(
-                        fontSize: 10,
-                        color: Colors.black26,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 0.5,
+              child: _isBannerAdReady && _bannerAd != null
+                  ? SizedBox(
+                      width: _bannerAd!.size.width.toDouble(),
+                      height: _bannerAd!.size.height.toDouble(),
+                      child: AdWidget(ad: _bannerAd!),
+                    )
+                  : Container(
+                      width: 320,
+                      height: 50,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        border: Border.all(color: Colors.black12),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      alignment: Alignment.center,
+                      child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.ad_units, color: Colors.black26, size: 16),
+                          SizedBox(width: 6),
+                          Text(
+                            'ANUNCIO PUBLICITARIO',
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: Colors.black26,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                  ],
-                ),
-              ),
             ),
           ],
         ),
