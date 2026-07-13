@@ -149,6 +149,7 @@ class _ScoreScreenState extends State<ScoreScreen> {
   // Add Score Entry
   void _addScore(int points, bool isTeamA) {
     setState(() {
+      _hasVibratedForCurrentWin = false; // Reset win flag on new entry to trigger validation
       if (isTeamA) {
         _scores.insert(0, ScoreEntry(scoreA: points, scoreB: 0));
       } else {
@@ -162,6 +163,7 @@ class _ScoreScreenState extends State<ScoreScreen> {
   // Toggle delete on score entry
   void _toggleDeleteEntry(int index) {
     setState(() {
+      _hasVibratedForCurrentWin = false; // Reset win flag on change to trigger validation
       _scores[index].isDeleted = !_scores[index].isDeleted;
     });
     _saveState();
