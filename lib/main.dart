@@ -115,6 +115,8 @@ class _ScoreScreenState extends State<ScoreScreen> {
       .where((e) => !e.isDeleted)
       .fold(0, (sum, item) => sum + item.scoreB);
 
+  bool get _isGameOver => _totalA >= _targetScore || _totalB >= _targetScore;
+
   // Add Score Entry
   void _addScore(int points, bool isTeamA) {
     setState(() {
@@ -241,14 +243,14 @@ class _ScoreScreenState extends State<ScoreScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-                    // REGRESAR Button (Cancel victory and return to fix errors)
+                    // HISTORIAL Button (Cancel victory and return to review history/fix errors)
                     TextButton(
                       onPressed: () => Navigator.of(context).pop(false),
                       style: TextButton.styleFrom(
                         foregroundColor: Colors.white.withOpacity(0.8),
                       ),
                       child: const Text(
-                        'REGRESAR',
+                        'HISTORIAL',
                         style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.bold,
@@ -832,7 +834,7 @@ class _ScoreScreenState extends State<ScoreScreen> {
                             height: 36,
                             width: 100,
                             child: ElevatedButton(
-                              onPressed: () => _showSumPointsDialog(true),
+                              onPressed: _isGameOver ? null : () => _showSumPointsDialog(true),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.white.withOpacity(0.18),
                                 foregroundColor: Colors.white,
@@ -933,7 +935,7 @@ class _ScoreScreenState extends State<ScoreScreen> {
                             height: 36,
                             width: 100,
                             child: ElevatedButton(
-                              onPressed: () => _showSumPointsDialog(false),
+                              onPressed: _isGameOver ? null : () => _showSumPointsDialog(false),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.white.withOpacity(0.18),
                                 foregroundColor: Colors.white,
@@ -1151,6 +1153,37 @@ class _ScoreScreenState extends State<ScoreScreen> {
                               },
                             ),
                     ),
+                    if (_isGameOver)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 8.0),
+                        child: SizedBox(
+                          width: double.infinity,
+                          height: 52,
+                          child: ElevatedButton.icon(
+                            onPressed: () {
+                              final winner = _totalA >= _targetScore ? _teamAName : _teamBName;
+                              _showWinDialog(winner);
+                            },
+                            icon: const Icon(Icons.emoji_events, color: Colors.white),
+                            label: const Text(
+                              'CONFIRMAR VICTORIA',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                                letterSpacing: 1.0,
+                              ),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: _totalA >= _targetScore ? const Color(0xFF1E6CDB) : const Color(0xFFD61E3C),
+                              elevation: 2,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
                     // Bottom actions row (Matches Image 1)
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 20.0),
