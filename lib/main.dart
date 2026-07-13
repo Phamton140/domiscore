@@ -21,11 +21,17 @@ class DomiScoreApp extends StatelessWidget {
     return MaterialApp(
       title: 'DomiScore',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData.dark().copyWith(
-        scaffoldBackgroundColor: const Color(0xFF0F172A), // Slate 900
+      theme: ThemeData.light().copyWith(
+        scaffoldBackgroundColor: const Color(0xFFF3F4F6), // Light grey background
+        primaryColor: const Color(0xFF7C3AED), // Indigo/Purple accent
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF3B82F6),
-          brightness: Brightness.dark,
+          seedColor: const Color(0xFF7C3AED),
+          brightness: Brightness.light,
+        ),
+        textSelectionTheme: const TextSelectionThemeData(
+          cursorColor: Color(0xFF7C3AED),
+          selectionColor: Color(0xFFDDD6FE),
+          selectionHandleColor: Color(0xFF7C3AED),
         ),
         useMaterial3: true,
       ),
@@ -43,14 +49,13 @@ class ScoreScreen extends StatefulWidget {
 
 class _ScoreScreenState extends State<ScoreScreen> {
   // App State
-  String _teamAName = 'Nosotros';
-  String _teamBName = 'Ellos';
+  String _teamAName = 'NOSOTROS';
+  String _teamBName = 'ELLOS';
   int _targetScore = 200;
   int _winsA = 0;
   int _winsB = 0;
   List<ScoreEntry> _scores = [];
 
-  // Re-entry check for win vibration to prevent vibration loops
   bool _hasVibratedForCurrentWin = false;
 
   @override
@@ -64,8 +69,8 @@ class _ScoreScreenState extends State<ScoreScreen> {
     try {
       final prefs = await SharedPreferences.getInstance();
       setState(() {
-        _teamAName = prefs.getString('teamAName') ?? 'Nosotros';
-        _teamBName = prefs.getString('teamBName') ?? 'Ellos';
+        _teamAName = prefs.getString('teamAName') ?? 'NOSOTROS';
+        _teamBName = prefs.getString('teamBName') ?? 'ELLOS';
         _targetScore = prefs.getInt('targetScore') ?? 200;
         _winsA = prefs.getInt('winsA') ?? 0;
         _winsB = prefs.getInt('winsB') ?? 0;
@@ -78,7 +83,7 @@ class _ScoreScreenState extends State<ScoreScreen> {
               .toList();
         }
       });
-      _checkWinCondition(vibrate: false); // Check without vibrating on startup
+      _checkWinCondition(vibrate: false);
     } catch (e) {
       debugPrint("Error loading state: $e");
     }
@@ -129,34 +134,6 @@ class _ScoreScreenState extends State<ScoreScreen> {
       _scores[index].isDeleted = !_scores[index].isDeleted;
     });
     _saveState();
-    
-    // If we marked it as deleted, show snackbar with undo
-    if (_scores[index].isDeleted) {
-      final wasTeamA = _scores[index].scoreA > 0;
-      final points = wasTeamA ? _scores[index].scoreA : _scores[index].scoreB;
-      final teamName = wasTeamA ? _teamAName : _teamBName;
-
-      ScaffoldMessenger.of(context).clearSnackBars();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Se eliminó la anotación de $points pts para $teamName.'),
-          behavior: SnackBarBehavior.floating,
-          backgroundColor: const Color(0xFF1E293B),
-          action: SnackBarAction(
-            label: 'DESHACER',
-            textColor: Colors.blueAccent,
-            onPressed: () {
-              setState(() {
-                _scores[index].isDeleted = false;
-              });
-              _saveState();
-              _checkWinCondition(vibrate: true);
-            },
-          ),
-        ),
-      );
-    }
-    
     _checkWinCondition(vibrate: true);
   }
 
@@ -172,13 +149,11 @@ class _ScoreScreenState extends State<ScoreScreen> {
         }
         _hasVibratedForCurrentWin = true;
         
-        // Show winner dialog
         WidgetsBinding.instance.addPostFrameCallback((_) {
           _showWinDialog(tA >= _targetScore ? _teamAName : _teamBName);
         });
       }
     } else {
-      // Reset win vibration lock if scores are below meta (e.g. after deletion or reset)
       _hasVibratedForCurrentWin = false;
     }
   }
@@ -195,7 +170,6 @@ class _ScoreScreenState extends State<ScoreScreen> {
   void _showWinDialog(String winnerTeam) {
     final isTeamA = winnerTeam == _teamAName;
     
-    // Automatically increment wins (only if not already added to avoid duplicates)
     setState(() {
       if (isTeamA) {
         _winsA++;
@@ -210,18 +184,21 @@ class _ScoreScreenState extends State<ScoreScreen> {
       barrierDismissible: false,
       builder: (context) {
         return AlertDialog(
-          backgroundColor: const Color(0xFF1E293B),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: Row(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          title: const Row(
             children: [
-              const Icon(Icons.emoji_events, color: Colors.amber, size: 28),
-              const SizedBox(width: 8),
-              const Text('¡Partida Terminada!'),
+              Icon(Icons.emoji_events, color: Colors.amber, size: 28),
+              SizedBox(width: 8),
+              Text(
+                '¡Partida Terminada!',
+                style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87),
+              ),
             ],
           ),
           content: Text(
             'El equipo "$winnerTeam" ha alcanzado la meta de $_targetScore puntos y gana la partida.',
-            style: const TextStyle(fontSize: 16),
+            style: const TextStyle(fontSize: 16, color: Colors.black54),
           ),
           actions: [
             TextButton(
@@ -229,7 +206,10 @@ class _ScoreScreenState extends State<ScoreScreen> {
                 Navigator.of(context).pop();
                 _resetHandOnly();
               },
-              child: const Text('Comenzar Nueva Partida', style: TextStyle(color: Colors.blueAccent)),
+              child: const Text(
+                'Nueva Partida',
+                style: TextStyle(color: Color(0xFF7C3AED), fontWeight: FontWeight.bold),
+              ),
             ),
           ],
         );
@@ -257,63 +237,79 @@ class _ScoreScreenState extends State<ScoreScreen> {
     _saveState();
   }
 
-  // Dialog to edit team names
-  void _showEditNamesDialog() {
-    final nameAController = TextEditingController(text: _teamAName);
-    final nameBController = TextEditingController(text: _teamBName);
+  // Dialog to edit team names (Matches Image 3)
+  void _showEditNameDialog(bool isTeamA) {
+    final currentName = isTeamA ? _teamAName : _teamBName;
+    final controller = TextEditingController(text: currentName);
 
     showDialog(
       context: context,
       builder: (context) {
         return AlertDialog(
-          backgroundColor: const Color(0xFF1E293B),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: const Text('Editar Equipos'),
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+          title: Text(
+            'Editar nombre para $currentName',
+            style: const TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w500,
+              color: Colors.black87,
+            ),
+          ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               TextField(
-                controller: nameAController,
+                controller: controller,
+                autofocus: true,
+                style: const TextStyle(fontSize: 16, color: Colors.black87),
                 decoration: const InputDecoration(
-                  labelText: 'Nombre Bando Azul',
-                  labelStyle: TextStyle(color: Colors.blueAccent),
                   focusedBorder: UnderlineInputBorder(
-                    borderSide: BorderSide(color: Colors.blueAccent),
+                    borderSide: BorderSide(color: Color(0xFF7C3AED), width: 2),
                   ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: nameBController,
-                decoration: const InputDecoration(
-                  labelText: 'Nombre Bando Rojo',
-                  labelStyle: TextStyle(color: Colors.redAccent),
-                  focusedBorder: UnderlineInputBorder(
-                    borderSide: BorderSide(color: Colors.redAccent),
+                  enabledBorder: UnderlineInputBorder(
+                    borderSide: BorderSide(color: Colors.black26),
                   ),
                 ),
               ),
             ],
           ),
+          actionsPadding: const EdgeInsets.only(right: 16, bottom: 16),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancelar', style: TextStyle(color: Colors.grey)),
+              child: const Text(
+                'Cancelar',
+                style: TextStyle(
+                  color: Color(0xFF7C3AED),
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
+              ),
             ),
             TextButton(
               onPressed: () {
-                setState(() {
-                  _teamAName = nameAController.text.trim().isNotEmpty
-                      ? nameAController.text.trim()
-                      : 'Nosotros';
-                  _teamBName = nameBController.text.trim().isNotEmpty
-                      ? nameBController.text.trim()
-                      : 'Ellos';
-                });
-                _saveState();
+                final newName = controller.text.trim();
+                if (newName.isNotEmpty) {
+                  setState(() {
+                    if (isTeamA) {
+                      _teamAName = newName.toUpperCase();
+                    } else {
+                      _teamBName = newName.toUpperCase();
+                    }
+                  });
+                  _saveState();
+                }
                 Navigator.of(context).pop();
               },
-              child: const Text('Guardar', style: TextStyle(color: Colors.blueAccent)),
+              child: const Text(
+                'Guardar',
+                style: TextStyle(
+                  color: Color(0xFF7C3AED),
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
+              ),
             ),
           ],
         );
@@ -321,7 +317,7 @@ class _ScoreScreenState extends State<ScoreScreen> {
     );
   }
 
-  // Dialog to edit target score (meta)
+  // Dialog to edit target score (meta) (Matches Image 4)
   void _showEditTargetDialog() {
     final controller = TextEditingController(text: _targetScore.toString());
 
@@ -329,26 +325,52 @@ class _ScoreScreenState extends State<ScoreScreen> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          backgroundColor: const Color(0xFF1E293B),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: const Text('Definir Meta de Puntos'),
-          content: TextField(
-            controller: controller,
-            keyboardType: TextInputType.number,
-            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            decoration: const InputDecoration(
-              labelText: 'Puntos de Meta',
-              focusedBorder: UnderlineInputBorder(
-                borderSide: BorderSide(color: Colors.blueAccent),
-              ),
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+          title: const Text(
+            'Cambiar Meta',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w500,
+              color: Colors.black87,
             ),
           ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: controller,
+                keyboardType: TextInputType.number,
+                autofocus: true,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                style: const TextStyle(fontSize: 16, color: Colors.black87),
+                decoration: const InputDecoration(
+                  suffixText: 'pts',
+                  suffixStyle: TextStyle(color: Colors.black54),
+                  focusedBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: Color(0xFF7C3AED), width: 2),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: Colors.black26),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          actionsPadding: const EdgeInsets.only(right: 16, bottom: 16),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancelar', style: TextStyle(color: Colors.grey)),
+              child: const Text(
+                'CANCELAR',
+                style: TextStyle(
+                  color: Color(0xFF7C3AED),
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
+              ),
             ),
-            TextButton(
+            ElevatedButton(
               onPressed: () {
                 final parsed = int.tryParse(controller.text);
                 if (parsed != null && parsed > 0) {
@@ -360,7 +382,22 @@ class _ScoreScreenState extends State<ScoreScreen> {
                 }
                 Navigator.of(context).pop();
               },
-              child: const Text('Guardar', style: TextStyle(color: Colors.blueAccent)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFF3E8FF), // Light purple background
+                foregroundColor: const Color(0xFF7C3AED), // Dark purple text
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(100),
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              ),
+              child: const Text(
+                'CAMBIAR',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
+              ),
             ),
           ],
         );
@@ -368,207 +405,249 @@ class _ScoreScreenState extends State<ScoreScreen> {
     );
   }
 
-  // Bottom Sheet to add score
-  void _showAddScoreBottomSheet() {
-    int enteredPoints = 0;
-    bool isTeamA = true; // Defaults to Team A (Blue)
-    
-    showModalBottomSheet(
+  // Dialog to confirm reset all (Matches Image 5)
+  void _showConfirmResetAllDialog() {
+    showDialog(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: const Color(0xFF1E293B),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+          title: const Text(
+            'Reiniciar Todo',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w500,
+              color: Colors.black87,
+            ),
+          ),
+          content: const Text(
+            '¿Seguro que quieres borrar victorias y puntos actuales?',
+            style: TextStyle(fontSize: 15, color: Colors.black54),
+          ),
+          actionsPadding: const EdgeInsets.only(right: 16, bottom: 16),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text(
+                'CANCELAR',
+                style: TextStyle(
+                  color: Color(0xFF7C3AED),
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                _resetAll();
+                Navigator.of(context).pop();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFFF5252), // Red button
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(100),
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              ),
+              child: const Text(
+                'CONFIRMAR',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // Dialog to confirm reset hand
+  void _showConfirmResetHandDialog() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+          title: const Text(
+            'Reiniciar Mano',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w500,
+              color: Colors.black87,
+            ),
+          ),
+          content: const Text(
+            '¿Seguro que quieres borrar los puntos de la mano actual? Las victorias se conservarán.',
+            style: TextStyle(fontSize: 15, color: Colors.black54),
+          ),
+          actionsPadding: const EdgeInsets.only(right: 16, bottom: 16),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text(
+                'CANCELAR',
+                style: TextStyle(
+                  color: Color(0xFF7C3AED),
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                _resetHandOnly();
+                Navigator.of(context).pop();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFFF9800), // Orange button
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(100),
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              ),
+              child: const Text(
+                'CONFIRMAR',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // Custom dialogue to sum points (Clean layout with presets)
+  void _showSumPointsDialog(bool isTeamA) {
+    final teamName = isTeamA ? _teamAName : _teamBName;
+    int enteredPoints = 0;
+    
+    showDialog(
+      context: context,
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setModalState) {
-            return Padding(
-              padding: EdgeInsets.only(
-                bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-                top: 24,
-                left: 24,
-                right: 24,
+            return AlertDialog(
+              backgroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+              title: Text(
+                'Sumar puntos para $teamName',
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
               ),
-              child: Column(
+              content: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Text(
-                    'Anotar Puntos de la Mano',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 20),
-                  // Team selector buttons
-                  Row(
-                    children: [
-                      Expanded(
-                        child: GestureDetector(
-                          onTap: () => setModalState(() => isTeamA = true),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            decoration: BoxDecoration(
-                              gradient: isTeamA
-                                  ? const LinearGradient(
-                                      colors: [Color(0xFF2563EB), Color(0xFF3B82F6)],
-                                    )
-                                  : null,
-                              color: isTeamA ? null : Colors.transparent,
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: isTeamA ? Colors.transparent : Colors.blue.withOpacity(0.3),
-                                width: 2,
-                              ),
-                            ),
-                            alignment: Alignment.center,
-                            child: Text(
-                              _teamAName,
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: isTeamA ? Colors.white : Colors.blue.shade300,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: GestureDetector(
-                          onTap: () => setModalState(() => isTeamA = false),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            decoration: BoxDecoration(
-                              gradient: !isTeamA
-                                  ? const LinearGradient(
-                                      colors: [Color(0xFFDC2626), Color(0xFFEF4444)],
-                                    )
-                                  : null,
-                              color: !isTeamA ? null : Colors.transparent,
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: !isTeamA ? Colors.transparent : Colors.red.withOpacity(0.3),
-                                width: 2,
-                              ),
-                            ),
-                            alignment: Alignment.center,
-                            child: Text(
-                              _teamBName,
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: !isTeamA ? Colors.white : Colors.red.shade300,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-                  // Display currently typed score
+                  // Points display
                   Container(
                     width: double.infinity,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF0F172A),
+                      color: const Color(0xFFF3F4F6),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     alignment: Alignment.center,
                     child: Text(
                       '$enteredPoints pts',
                       style: TextStyle(
-                        fontSize: 36,
+                        fontSize: 28,
                         fontWeight: FontWeight.bold,
-                        color: isTeamA ? const Color(0xFF60A5FA) : const Color(0xFFF87171),
+                        color: isTeamA ? const Color(0xFF0F3CC9) : const Color(0xFF9F1239),
                       ),
                     ),
                   ),
                   const SizedBox(height: 16),
-                  // Quick add presets
+                  // Preset buttons
                   Wrap(
-                    spacing: 12,
-                    runSpacing: 12,
+                    spacing: 8,
+                    runSpacing: 8,
                     alignment: WrapAlignment.center,
                     children: [20, 25, 30, 40, 50, 75, 100].map((preset) {
-                      return ElevatedButton(
-                        onPressed: () {
-                          setModalState(() {
-                            enteredPoints = preset;
-                          });
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF334155),
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
+                      return SizedBox(
+                        height: 36,
+                        child: ElevatedButton(
+                          onPressed: () {
+                            setModalState(() {
+                              enteredPoints = preset;
+                            });
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFF3F4F6),
+                            foregroundColor: Colors.black87,
+                            elevation: 0,
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
                           ),
+                          child: Text('+$preset'),
                         ),
-                        child: Text('+$preset'),
                       );
                     }).toList(),
                   ),
-                  const SizedBox(height: 20),
-                  // Custom input pad row & Clear button
+                  const SizedBox(height: 12),
+                  // Action buttons
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
-                      OutlinedButton.icon(
-                        onPressed: () {
-                          setModalState(() => enteredPoints = 0);
-                        },
-                        icon: const Icon(Icons.clear, color: Colors.grey),
-                        label: const Text('Limpiar', style: TextStyle(color: Colors.grey)),
-                        style: OutlinedButton.styleFrom(
-                          side: const BorderSide(color: Colors.grey),
-                        ),
+                      TextButton(
+                        onPressed: () => setModalState(() => enteredPoints = 0),
+                        child: const Text('Limpiar', style: TextStyle(color: Colors.grey)),
                       ),
-                      // Custom points dialog button
-                      OutlinedButton.icon(
+                      TextButton(
                         onPressed: () async {
-                          final customVal = await _showCustomPointsInputDialog();
+                          final customVal = await _showCustomPointsKeyboard();
                           if (customVal != null) {
                             setModalState(() {
                               enteredPoints = customVal;
                             });
                           }
                         },
-                        icon: const Icon(Icons.keyboard, color: Colors.blueAccent),
-                        label: const Text('Teclado', style: TextStyle(color: Colors.blueAccent)),
-                        style: OutlinedButton.styleFrom(
-                          side: const BorderSide(color: Colors.blueAccent),
-                        ),
+                        child: const Text('Teclado', style: TextStyle(color: Color(0xFF7C3AED))),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 24),
-                  // Save score button
-                  SizedBox(
-                    width: double.infinity,
-                    height: 52,
-                    child: ElevatedButton(
-                      onPressed: enteredPoints <= 0
-                          ? null
-                          : () {
-                              _addScore(enteredPoints, isTeamA);
-                              Navigator.of(context).pop();
-                            },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: isTeamA ? const Color(0xFF2563EB) : const Color(0xFFDC2626),
-                        disabledBackgroundColor: Colors.grey.shade800,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: const Text(
-                        'Anotar Mano',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                  ),
                 ],
               ),
+              actionsPadding: const EdgeInsets.only(right: 16, bottom: 16),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('CANCELAR', style: TextStyle(color: Color(0xFF7C3AED))),
+                ),
+                ElevatedButton(
+                  onPressed: enteredPoints <= 0
+                      ? null
+                      : () {
+                          _addScore(enteredPoints, isTeamA);
+                          Navigator.of(context).pop();
+                        },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: isTeamA ? const Color(0xFF1E6CDB) : const Color(0xFFD61E3C),
+                    foregroundColor: Colors.white,
+                    disabledBackgroundColor: Colors.grey.shade200,
+                    disabledForegroundColor: Colors.grey,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(100),
+                    ),
+                  ),
+                  child: const Text('SUMAR'),
+                ),
+              ],
             );
           },
         );
@@ -576,24 +655,23 @@ class _ScoreScreenState extends State<ScoreScreen> {
     );
   }
 
-  // Popup input for entering custom scores not in presets
-  Future<int?> _showCustomPointsInputDialog() async {
+  // Keyboard pop-up for custom scores
+  Future<int?> _showCustomPointsKeyboard() async {
     final controller = TextEditingController();
     return showDialog<int>(
       context: context,
       builder: (context) {
         return AlertDialog(
-          backgroundColor: const Color(0xFF1E293B),
-          title: const Text('Ingresar Puntos Personalizados'),
+          backgroundColor: Colors.white,
+          title: const Text('Puntos Personalizados'),
           content: TextField(
             controller: controller,
             keyboardType: TextInputType.number,
             autofocus: true,
             inputFormatters: [FilteringTextInputFormatter.digitsOnly],
             decoration: const InputDecoration(
-              hintText: 'Ej. 18',
               focusedBorder: UnderlineInputBorder(
-                borderSide: BorderSide(color: Colors.blueAccent),
+                borderSide: BorderSide(color: Color(0xFF7C3AED)),
               ),
             ),
           ),
@@ -607,7 +685,7 @@ class _ScoreScreenState extends State<ScoreScreen> {
                 final val = int.tryParse(controller.text);
                 Navigator.of(context).pop(val);
               },
-              child: const Text('Aceptar', style: TextStyle(color: Colors.blueAccent)),
+              child: const Text('Aceptar', style: TextStyle(color: Color(0xFF7C3AED))),
             ),
           ],
         );
@@ -620,98 +698,147 @@ class _ScoreScreenState extends State<ScoreScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text(
-          'DomiScore',
-          style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1),
+          'DOMISCORE',
+          style: TextStyle(
+            fontWeight: FontWeight.w900,
+            fontSize: 22,
+            letterSpacing: 1.2,
+            color: Color(0xFF1F2937),
+          ),
         ),
         centerTitle: true,
-        backgroundColor: const Color(0xFF0F172A),
+        backgroundColor: const Color(0xFFF3F4F6),
         elevation: 0,
+        scrolledUnderElevation: 0,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.settings),
-            onPressed: () {
-              // Open Settings Sheet or Menu
-              _showSettingsBottomSheet();
-            },
+          // Meta Button Pill (Matches Image 1)
+          GestureDetector(
+            onTap: _showEditTargetDialog,
+            child: Container(
+              margin: const EdgeInsets.only(right: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: const Color(0xFFE2E8F0),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.flag,
+                    color: Color(0xFF475569),
+                    size: 14,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    'META: $_targetScore',
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF475569),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
         ],
       ),
       body: SafeArea(
         child: Column(
           children: [
-            // Scores header - Prominent for distant reading
+            const SizedBox(height: 12),
+            // Two Side-by-Side Gradient Cards (Matches Image 1)
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
               child: Row(
                 children: [
-                  // Team A (Blue) Panel
+                  // Team A (Blue) Card
                   Expanded(
                     child: Container(
-                      height: 180,
+                      height: 200,
                       decoration: BoxDecoration(
                         gradient: const LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [Color(0xFF1D4ED8), Color(0xFF3B82F6)], // Darker Blue to Bright Blue
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [Color(0xFF0F3EBA), Color(0xFF1E6CDB)],
                         ),
-                        borderRadius: BorderRadius.circular(20),
+                        borderRadius: BorderRadius.circular(24),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.blue.withOpacity(0.3),
-                            blurRadius: 12,
+                            color: Colors.blue.withOpacity(0.18),
+                            blurRadius: 10,
                             offset: const Offset(0, 4),
                           )
                         ],
                       ),
-                      child: Stack(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         children: [
-                          // Team name and wins
-                          Positioned(
-                            top: 16,
-                            left: 16,
-                            right: 16,
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                          // Team name with Pencil Edit Icon
+                          GestureDetector(
+                            onTap: () => _showEditNameDialog(true),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Text(
                                   _teamAName,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
                                   style: const TextStyle(
-                                    fontSize: 18,
+                                    fontSize: 14,
                                     fontWeight: FontWeight.bold,
                                     color: Colors.white70,
+                                    letterSpacing: 0.8,
                                   ),
                                 ),
-                                const SizedBox(height: 2),
-                                Row(
-                                  children: [
-                                    const Icon(Icons.emoji_events, color: Colors.amber, size: 14),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      '$_winsA ${_winsA == 1 ? 'victoria' : 'victorias'}',
-                                      style: const TextStyle(
-                                        fontSize: 12,
-                                        color: Colors.white60,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                  ],
+                                const SizedBox(width: 4),
+                                const Icon(
+                                  Icons.edit,
+                                  color: Colors.white70,
+                                  size: 12,
                                 ),
                               ],
                             ),
                           ),
-                          // Big Score
-                          Center(
-                            child: Padding(
-                              padding: const EdgeInsets.only(top: 24.0),
-                              child: Text(
-                                '$_totalA',
-                                style: const TextStyle(
-                                  fontSize: 76,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                  height: 1.1,
+                          // Huge Score
+                          Text(
+                            '$_totalA',
+                            style: const TextStyle(
+                              fontSize: 78,
+                              fontWeight: FontWeight.w900,
+                              color: Colors.white,
+                              height: 1.0,
+                            ),
+                          ),
+                          // Victories Label
+                          Text(
+                            '$_winsA ${_winsA == 1 ? 'VICTORIA' : 'VICTORIAS'}',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white70,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                          // SUMAR Button
+                          SizedBox(
+                            height: 36,
+                            width: 100,
+                            child: ElevatedButton(
+                              onPressed: () => _showSumPointsDialog(true),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.white.withOpacity(0.18),
+                                foregroundColor: Colors.white,
+                                elevation: 0,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(100),
+                                ),
+                                padding: EdgeInsets.zero,
+                              ),
+                              child: const Text(
+                                'SUMAR',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: 0.5,
                                 ),
                               ),
                             ),
@@ -721,74 +848,93 @@ class _ScoreScreenState extends State<ScoreScreen> {
                     ),
                   ),
                   const SizedBox(width: 12),
-                  // Team B (Red) Panel
+                  // Team B (Red) Card
                   Expanded(
                     child: Container(
-                      height: 180,
+                      height: 200,
                       decoration: BoxDecoration(
                         gradient: const LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [Color(0xFFB91C1C), Color(0xFFEF4444)], // Darker Red to Bright Red
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [Color(0xFF9E0B24), Color(0xFFD91E36)],
                         ),
-                        borderRadius: BorderRadius.circular(20),
+                        borderRadius: BorderRadius.circular(24),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.red.withOpacity(0.3),
-                            blurRadius: 12,
+                            color: Colors.red.withOpacity(0.18),
+                            blurRadius: 10,
                             offset: const Offset(0, 4),
                           )
                         ],
                       ),
-                      child: Stack(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         children: [
-                          // Team name and wins
-                          Positioned(
-                            top: 16,
-                            left: 16,
-                            right: 16,
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                          // Team name with Pencil Edit Icon
+                          GestureDetector(
+                            onTap: () => _showEditNameDialog(false),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Text(
                                   _teamBName,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
                                   style: const TextStyle(
-                                    fontSize: 18,
+                                    fontSize: 14,
                                     fontWeight: FontWeight.bold,
                                     color: Colors.white70,
+                                    letterSpacing: 0.8,
                                   ),
                                 ),
-                                const SizedBox(height: 2),
-                                Row(
-                                  children: [
-                                    const Icon(Icons.emoji_events, color: Colors.amber, size: 14),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      '$_winsB ${_winsB == 1 ? 'victoria' : 'victorias'}',
-                                      style: const TextStyle(
-                                        fontSize: 12,
-                                        color: Colors.white60,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                  ],
+                                const SizedBox(width: 4),
+                                const Icon(
+                                  Icons.edit,
+                                  color: Colors.white70,
+                                  size: 12,
                                 ),
                               ],
                             ),
                           ),
-                          // Big Score
-                          Center(
-                            child: Padding(
-                              padding: const EdgeInsets.only(top: 24.0),
-                              child: Text(
-                                '$_totalB',
-                                style: const TextStyle(
-                                  fontSize: 76,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                  height: 1.1,
+                          // Huge Score
+                          Text(
+                            '$_totalB',
+                            style: const TextStyle(
+                              fontSize: 78,
+                              fontWeight: FontWeight.w900,
+                              color: Colors.white,
+                              height: 1.0,
+                            ),
+                          ),
+                          // Victories Label
+                          Text(
+                            '$_winsB ${_winsB == 1 ? 'VICTORIA' : 'VICTORIAS'}',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white70,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                          // SUMAR Button
+                          SizedBox(
+                            height: 36,
+                            width: 100,
+                            child: ElevatedButton(
+                              onPressed: () => _showSumPointsDialog(false),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.white.withOpacity(0.18),
+                                foregroundColor: Colors.white,
+                                elevation: 0,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(100),
+                                ),
+                                padding: EdgeInsets.zero,
+                              ),
+                              child: const Text(
+                                'SUMAR',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: 0.5,
                                 ),
                               ),
                             ),
@@ -800,211 +946,262 @@ class _ScoreScreenState extends State<ScoreScreen> {
                 ],
               ),
             ),
-            
-            // Meta indicator
-            Container(
-              padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 16),
-              margin: const EdgeInsets.symmetric(vertical: 8),
-              decoration: BoxDecoration(
-                color: const Color(0xFF1E293B),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Text(
-                'META: $_targetScore PTS',
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white54,
-                  letterSpacing: 1.5,
-                ),
-              ),
-            ),
-            
-            // History label and separator
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 24.0, vertical: 4.0),
-              child: Row(
-                children: [
-                  Text(
-                    'Historial de Manos',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.grey,
-                    ),
-                  ),
-                  Spacer(),
-                  Text(
-                    '(Arrastra o pulsa para eliminar)',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: Colors.grey,
-                      fontStyle: FontStyle.italic,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            
-            // Score History List (scrollable)
+            const SizedBox(height: 24),
+            // White History Card Panel (Matches Image 1 & 2)
             Expanded(
-              child: _scores.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
+              child: Container(
+                width: double.infinity,
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black26,
+                      blurRadius: 15,
+                      offset: Offset(0, -2),
+                    )
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    // Column Headers Row
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+                      child: Row(
                         children: [
-                          Icon(Icons.sports_esports, size: 48, color: Colors.blue.withOpacity(0.2)),
-                          const SizedBox(height: 8),
-                          Text(
-                            'No hay anotaciones registradas',
-                            style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
+                          const SizedBox(
+                            width: 40,
+                            child: Text(
+                              '#',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w800,
+                                color: Colors.black38,
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            child: Text(
+                              _teamAName,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w900,
+                                color: Color(0xFF0F3CC9),
+                                letterSpacing: 0.8,
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            child: Text(
+                              _teamBName,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w900,
+                                color: Color(0xFF9E0B24),
+                                letterSpacing: 0.8,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(
+                            width: 60,
+                            child: Text(
+                              'ACCIÓN',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w800,
+                                color: Colors.black38,
+                              ),
+                            ),
                           ),
                         ],
                       ),
-                    )
-                  : ListView.builder(
-                      physics: const BouncingScrollPhysics(),
-                      itemCount: _scores.length,
-                      itemBuilder: (context, index) {
-                        final entry = _scores[index];
-                        return Dismissible(
-                          key: UniqueKey(), // Use UniqueKey to support toggle states correctly
-                          direction: DismissDirection.horizontal,
-                          onDismissed: (_) {
-                            _toggleDeleteEntry(index);
-                          },
-                          background: Container(
-                            color: Colors.red.withOpacity(0.2),
-                            alignment: Alignment.centerLeft,
-                            padding: const EdgeInsets.only(left: 20.0),
-                            child: const Icon(Icons.delete, color: Colors.red),
-                          ),
-                          secondaryBackground: Container(
-                            color: Colors.red.withOpacity(0.2),
-                            alignment: Alignment.centerRight,
-                            padding: const EdgeInsets.only(right: 20.0),
-                            child: const Icon(Icons.delete, color: Colors.red),
-                          ),
-                          child: InkWell(
-                            onTap: () {
-                              _toggleDeleteEntry(index);
-                            },
-                            child: Column(
-                              children: [
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 12.0),
-                                  child: Row(
-                                    children: [
-                                      // Score A
-                                      Expanded(
-                                        child: Text(
-                                          '${entry.scoreA}',
-                                          textAlign: TextAlign.center,
-                                          style: TextStyle(
-                                            fontSize: 22,
-                                            fontWeight: entry.isDeleted ? FontWeight.normal : FontWeight.bold,
-                                            color: entry.isDeleted
-                                                ? Colors.blue.withOpacity(0.25)
-                                                : (entry.scoreA > 0 ? const Color(0xFF60A5FA) : Colors.white60),
-                                            decoration: entry.isDeleted ? TextDecoration.lineThrough : null,
-                                            decorationColor: Colors.red,
-                                            decorationThickness: 2.0,
-                                          ),
-                                        ),
-                                      ),
-                                      
-                                      // Divider indicator
-                                      Container(
-                                        height: 24,
-                                        width: 1.5,
-                                        color: Colors.grey.shade800,
-                                      ),
-                                      
-                                      // Score B
-                                      Expanded(
-                                        child: Text(
-                                          '${entry.scoreB}',
-                                          textAlign: TextAlign.center,
-                                          style: TextStyle(
-                                            fontSize: 22,
-                                            fontWeight: entry.isDeleted ? FontWeight.normal : FontWeight.bold,
-                                            color: entry.isDeleted
-                                                ? Colors.red.withOpacity(0.25)
-                                                : (entry.scoreB > 0 ? const Color(0xFFF87171) : Colors.white60),
-                                            decoration: entry.isDeleted ? TextDecoration.lineThrough : null,
-                                            decorationColor: Colors.red,
-                                            decorationThickness: 2.0,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
+                    ),
+                    const Divider(height: 1, color: Color(0xFFE5E7EB)),
+                    // List of hands / Empty state
+                    Expanded(
+                      child: _scores.isEmpty
+                          ? const Center(
+                              child: Text(
+                                'SIN JUGADAS REGISTRADAS',
+                                style: TextStyle(
+                                  color: Color(0xFFD1D5DB),
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: 1.0,
                                 ),
-                                Divider(
-                                  height: 1,
-                                  color: Colors.grey.shade900,
-                                  indent: 24,
-                                  endIndent: 24,
+                              ),
+                            )
+                          : ListView.builder(
+                              physics: const BouncingScrollPhysics(),
+                              itemCount: _scores.length,
+                              itemBuilder: (context, index) {
+                                final entry = _scores[index];
+                                final reverseIndex = _scores.length - index;
+                                return Column(
+                                  children: [
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 8.0),
+                                      child: Stack(
+                                        alignment: Alignment.center,
+                                        children: [
+                                          // Row layout content
+                                          Row(
+                                            children: [
+                                              // Index column
+                                              SizedBox(
+                                                width: 40,
+                                                child: Text(
+                                                  '$reverseIndex',
+                                                  textAlign: TextAlign.center,
+                                                  style: const TextStyle(
+                                                    fontSize: 14,
+                                                    color: Colors.black38,
+                                                    fontWeight: FontWeight.w500,
+                                                  ),
+                                                ),
+                                              ),
+                                              // Score A
+                                              Expanded(
+                                                child: Text(
+                                                  '${entry.scoreA}',
+                                                  textAlign: TextAlign.center,
+                                                  style: TextStyle(
+                                                    fontSize: 18,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: entry.isDeleted
+                                                        ? Colors.black26
+                                                        : (entry.scoreA > 0
+                                                            ? const Color(0xFF0F3CC9)
+                                                            : Colors.black38),
+                                                  ),
+                                                ),
+                                              ),
+                                              // Score B
+                                              Expanded(
+                                                child: Text(
+                                                  '${entry.scoreB}',
+                                                  textAlign: TextAlign.center,
+                                                  style: TextStyle(
+                                                    fontSize: 18,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: entry.isDeleted
+                                                        ? Colors.black26
+                                                        : (entry.scoreB > 0
+                                                            ? const Color(0xFF9E0B24)
+                                                            : Colors.black38),
+                                                  ),
+                                                ),
+                                              ),
+                                              // Action button (Matches Image 2)
+                                              SizedBox(
+                                                width: 60,
+                                                child: IconButton(
+                                                  icon: Icon(
+                                                    entry.isDeleted
+                                                        ? Icons.settings_backup_restore
+                                                        : Icons.delete_outline,
+                                                    color: entry.isDeleted
+                                                        ? const Color(0xFF10B981) // Green restore icon
+                                                        : const Color(0xFFF59E0B), // Orange trash icon
+                                                    size: 22,
+                                                  ),
+                                                  onPressed: () => _toggleDeleteEntry(index),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          // Full-row cross out line (Matches Image 2)
+                                          if (entry.isDeleted)
+                                            Positioned(
+                                              left: 45,
+                                              right: 65,
+                                              child: Container(
+                                                height: 1.5,
+                                                color: Colors.black38,
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                    ),
+                                    const Divider(
+                                      height: 1,
+                                      color: Color(0xFFF3F4F6),
+                                      indent: 24,
+                                      endIndent: 24,
+                                    ),
+                                  ],
+                                );
+                              },
+                            ),
+                    ),
+                    // Bottom actions row (Matches Image 1)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 16.0),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          GestureDetector(
+                            onTap: _showConfirmResetHandDialog,
+                            child: const Row(
+                              children: [
+                                Icon(
+                                  Icons.refresh,
+                                  color: Color(0xFFD97706), // Orange circular refresh
+                                  size: 18,
+                                ),
+                                SizedBox(width: 4),
+                                Text(
+                                  'REINICIAR MANO',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w900,
+                                    color: Color(0xFFD97706),
+                                    letterSpacing: 0.5,
+                                  ),
                                 ),
                               ],
                             ),
                           ),
-                        );
-                      },
-                    ),
-            ),
-            
-            // Anotación trigger button
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 12.0),
-              child: SizedBox(
-                width: double.infinity,
-                height: 54,
-                child: ElevatedButton.icon(
-                  onPressed: _showAddScoreBottomSheet,
-                  icon: const Icon(Icons.add, color: Colors.white, size: 24),
-                  label: const Text(
-                    'Anotar Puntos',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF3B82F6),
-                    elevation: 4,
-                    shadowColor: Colors.blue.withOpacity(0.3),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            
-            // Standard AdMob Banner space
-            Container(
-              width: double.infinity,
-              height: 56, // Standard mobile banner size (50-60 pixels)
-              margin: const EdgeInsets.only(top: 4),
-              decoration: const BoxDecoration(
-                color: Color(0xFF020617), // Slate 950
-                border: Border(
-                  top: BorderSide(color: Color(0xFF1E293B), width: 1),
-                ),
-              ),
-              child: const Center(
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.ad_units, color: Colors.white30, size: 18),
-                    SizedBox(width: 8),
-                    Text(
-                      'Espacio reservado para Publicidad',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: Colors.white30,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 0.5,
+                          GestureDetector(
+                            onTap: _showConfirmResetAllDialog,
+                            child: const Row(
+                              children: [
+                                Icon(
+                                  Icons.delete_outline,
+                                  color: Color(0xFFEF4444), // Red delete icon
+                                  size: 18,
+                                ),
+                                SizedBox(width: 4),
+                                Text(
+                                  'REINICIAR TODO',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w900,
+                                    color: Color(0xFFEF4444),
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
                     ),
+                    // Developer footer
+                    const Text(
+                      'Desarrollado por Melquisedec Sarfeliz',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.black26,
+                        letterSpacing: 0.2,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
                   ],
                 ),
               ),
@@ -1012,122 +1209,6 @@ class _ScoreScreenState extends State<ScoreScreen> {
           ],
         ),
       ),
-    );
-  }
-
-  // Dialog to handle all settings
-  void _showSettingsBottomSheet() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: const Color(0xFF1E293B),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) {
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const SizedBox(height: 12),
-              Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade700,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'Configuración y Opciones',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 12),
-              ListTile(
-                leading: const Icon(Icons.edit, color: Colors.blueAccent),
-                title: const Text('Editar nombres de bandos'),
-                onTap: () {
-                  Navigator.of(context).pop();
-                  _showEditNamesDialog();
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.flag, color: Colors.blueAccent),
-                title: const Text('Cambiar meta de puntos'),
-                subtitle: Text('Meta actual: $_targetScore pts'),
-                onTap: () {
-                  Navigator.of(context).pop();
-                  _showEditTargetDialog();
-                },
-              ),
-              const Divider(color: Colors.white10),
-              ListTile(
-                leading: const Icon(Icons.restart_alt, color: Colors.orangeAccent),
-                title: const Text('Reiniciar mano actual'),
-                subtitle: const Text('Pone los puntos actuales a 0. Mantiene las victorias.'),
-                onTap: () {
-                  Navigator.of(context).pop();
-                  _showConfirmResetDialog(false);
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.refresh, color: Colors.redAccent),
-                title: const Text('Reiniciar partida completa'),
-                subtitle: const Text('Reinicia puntos y marcador de victorias.'),
-                onTap: () {
-                  Navigator.of(context).pop();
-                  _showConfirmResetDialog(true);
-                },
-              ),
-              const SizedBox(height: 16),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  // Dialog to confirm reset
-  void _showConfirmResetDialog(bool resetAllMatches) {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          backgroundColor: const Color(0xFF1E293B),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: Text(resetAllMatches ? '¿Reiniciar Todo?' : '¿Reiniciar Mano?'),
-          content: Text(
-            resetAllMatches
-                ? 'Esta acción reiniciará los puntos a cero y borrará el contador de victorias de ambos equipos. ¿Proceder?'
-                : 'Esta acción borrará todas las anotaciones de la mano actual. Las victorias se mantendrán. ¿Proceder?',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancelar', style: TextStyle(color: Colors.grey)),
-            ),
-            TextButton(
-              onPressed: () {
-                if (resetAllMatches) {
-                  _resetAll();
-                } else {
-                  _resetHandOnly();
-                }
-                Navigator.of(context).pop();
-                
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(resetAllMatches ? 'Partida reiniciada por completo.' : 'Mano actual reiniciada.'),
-                    backgroundColor: const Color(0xFF1E293B),
-                    behavior: SnackBarBehavior.floating,
-                  ),
-                );
-              },
-              child: const Text('Reiniciar', style: TextStyle(color: Colors.redAccent)),
-            ),
-          ],
-        );
-      },
     );
   }
 }
