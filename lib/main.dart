@@ -744,22 +744,18 @@ class _ScoreScreenState extends State<ScoreScreen> {
                             onTap: () => _showEditNameDialog(true),
                             behavior: HitTestBehavior.opaque,
                             child: Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+                              padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 8.0),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Flexible(
-                                    child: Text(
-                                      _teamAName,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.white70,
-                                        letterSpacing: 0.8,
-                                      ),
+                                  Text(
+                                    _teamAName,
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white70,
+                                      letterSpacing: 0.8,
                                     ),
                                   ),
                                   const SizedBox(width: 4),
@@ -849,22 +845,18 @@ class _ScoreScreenState extends State<ScoreScreen> {
                             onTap: () => _showEditNameDialog(false),
                             behavior: HitTestBehavior.opaque,
                             child: Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+                              padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 8.0),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Flexible(
-                                    child: Text(
-                                      _teamBName,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.white70,
-                                        letterSpacing: 0.8,
-                                      ),
+                                  Text(
+                                    _teamBName,
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white70,
+                                      letterSpacing: 0.8,
                                     ),
                                   ),
                                   const SizedBox(width: 4),
