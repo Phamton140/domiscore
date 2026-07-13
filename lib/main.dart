@@ -169,94 +169,133 @@ class _ScoreScreenState extends State<ScoreScreen> {
   // Show winning dialog and add victory (Matches user's screenshot)
   void _showWinDialog(String winnerTeam) {
     final isTeamA = winnerTeam == _teamAName;
-    
-    setState(() {
-      if (isTeamA) {
-        _winsA++;
-      } else {
-        _winsB++;
-      }
-    });
-    _saveState();
 
-    showDialog(
+    showDialog<bool>(
       context: context,
       barrierDismissible: true,
       builder: (context) {
         return Dialog(
           backgroundColor: Colors.transparent,
           insetPadding: const EdgeInsets.symmetric(horizontal: 40),
-          child: GestureDetector(
-            onTap: () => Navigator.of(context).pop(),
-            child: Container(
-              padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 24),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    Color(0xFF8B5CF6), // Purple
-                    Color(0xFFD946EF), // Magenta
-                    Color(0xFFEF4444), // Red
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 24),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFF8B5CF6), // Purple
+                  Color(0xFFD946EF), // Magenta
+                  Color(0xFFEF4444), // Red
+                ],
+              ),
+              borderRadius: BorderRadius.circular(28),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.3),
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  Icons.emoji_events,
+                  color: Color(0xFFFFD700), // Gold Trophy
+                  size: 80,
+                ),
+                const SizedBox(height: 24),
+                const Text(
+                  '¡FELICIDADES!',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white70,
+                    letterSpacing: 2.0,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  winnerTeam.toUpperCase(),
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 38,
+                    fontWeight: FontWeight.w900,
+                    color: Colors.white,
+                    letterSpacing: 1.2,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'HA GANADO LA PARTIDA',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                    letterSpacing: 1.5,
+                  ),
+                ),
+                const SizedBox(height: 28),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    // REGRESAR Button (Cancel victory and return to fix errors)
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(false),
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.white.withOpacity(0.8),
+                      ),
+                      child: const Text(
+                        'REGRESAR',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 1.0,
+                        ),
+                      ),
+                    ),
+                    // NUEVA PARTIDA Button (Accept victory and reset)
+                    ElevatedButton(
+                      onPressed: () => Navigator.of(context).pop(true),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: const Color(0xFF7C3AED),
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(100),
+                        ),
+                      ),
+                      child: const Text(
+                        'NUEVA PARTIDA',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ),
                   ],
                 ),
-                borderRadius: BorderRadius.circular(28),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.3),
-                    blurRadius: 20,
-                    offset: const Offset(0, 10),
-                  ),
-                ],
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(
-                    Icons.emoji_events,
-                    color: Color(0xFFFFD700), // Gold Trophy
-                    size: 80,
-                  ),
-                  const SizedBox(height: 24),
-                  const Text(
-                    '¡FELICIDADES!',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white70,
-                      letterSpacing: 2.0,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    winnerTeam.toUpperCase(),
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontSize: 38,
-                      fontWeight: FontWeight.w900,
-                      color: Colors.white,
-                      letterSpacing: 1.2,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'HA GANADO LA PARTIDA',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                      letterSpacing: 1.5,
-                    ),
-                  ),
-                ],
-              ),
+              ],
             ),
           ),
         );
       },
-    ).then((_) {
-      // Clean hand automatically when dialog is closed/dismissed
-      _resetHandOnly();
+    ).then((confirmedWin) {
+      if (confirmedWin == true) {
+        setState(() {
+          if (isTeamA) {
+            _winsA++;
+          } else {
+            _winsB++;
+          }
+        });
+        _saveState();
+        _resetHandOnly();
+      }
     });
   }
 
