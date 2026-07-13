@@ -18,13 +18,16 @@
 * **💾 Persistencia Local**: Tus partidas no se perderán. Todo el historial de manos, victorias por bando, nombres de equipos y la meta configurada se guardan automáticamente con `shared_preferences`.
 * **✏️ Personalización de Nombres**: Edita el nombre de ambos bandos de manera ágil (hasta 13 caracteres de límite) tocando cualquier parte de su cabecera. Cuenta con protección contra desbordamiento en la interfaz.
 * **🎯 Control de Meta de Puntos**: Define los puntos necesarios para ganar (por defecto **200 pts**) a través de un diálogo cómodo con teclado numérico automático.
-* **📳 Alerta de Victoria Prolongada**: Al alcanzar o sobrepasar la meta de puntos, el dispositivo móvil ejecuta una vibración física controlada durante **3 segundos** acompañada de una pantalla de felicitación interactiva.
+* **📳 Alerta de Victoria y Auto-Cierre**: Al alcanzar o sobrepasar la meta de puntos, el dispositivo móvil ejecuta una vibración física controlada durante **3 segundos** acompañada de una pantalla de felicitación interactiva. Inmediatamente termina la vibración, **la pantalla de victoria se cierra sola automáticamente**, actualizando el marcador principal en segundo plano sin requerir toques manuales.
+* **⏳ Historial de Partida Anterior (Restauración)**:
+  - Un nuevo botón de reloj (`Icons.history`) en la esquina superior izquierda de la cabecera permite visualizar los detalles de la partida que acaba de concluir.
+  - **Función de Restauración**: Si se detecta que la partida terminó debido a una puntuación ingresada por error, el usuario puede presionar **RESTAURAR** en el historial. Esto devolverá de forma automática los puntos al tablero activo y **descontará la victoria** del equipo ganador, permitiendo tachar el puntaje incorrecto y continuar jugando sin alterar el historial acumulado.
 * **🔄 Historial Inteligente de Manos**:
   - Ordenado de la mano más reciente a la más antigua.
   - Al ingresar puntos en un bando, se anota automáticamente un cero en el bando contrario.
   - Permite tachar un registro erróneo con una **línea de tachado que cruza toda la fila**, actualizando el total en tiempo real.
   - Posibilidad de deshacer o restaurar la mano eliminada instantáneamente pulsando el botón verde de restauración.
-* **💸 Monetización Limpia**: Espacio fijo reservado para anuncios **Google AdMob** (Banner de 320x50) en el extremo inferior de la pantalla, completamente integrado sin invadir el espacio interactivo del juego.
+* **💸 Monetización Limpia**: Espacio fijo reservado para anuncios **Google AdMob** (Banner de 320x50) en el extremo inferior de la pantalla, completamente integrado sin invadir el espacio interactivo del juego ni sufrir desbordamientos por la apertura del teclado.
 
 ---
 
