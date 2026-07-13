@@ -305,8 +305,10 @@ class _ScoreScreenState extends State<ScoreScreen> {
               TextField(
                 controller: controller,
                 autofocus: true,
+                maxLength: 10,
                 style: const TextStyle(fontSize: 16, color: Colors.black87),
                 decoration: const InputDecoration(
+                  counterText: "",
                   focusedBorder: UnderlineInputBorder(
                     borderSide: BorderSide(color: Color(0xFF7C3AED), width: 2),
                   ),
@@ -746,13 +748,17 @@ class _ScoreScreenState extends State<ScoreScreen> {
                                 mainAxisSize: MainAxisSize.min,
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Text(
-                                    _teamAName,
-                                    style: const TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.white70,
-                                      letterSpacing: 0.8,
+                                  Flexible(
+                                    child: Text(
+                                      _teamAName,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white70,
+                                        letterSpacing: 0.8,
+                                      ),
                                     ),
                                   ),
                                   const SizedBox(width: 4),
@@ -847,13 +853,17 @@ class _ScoreScreenState extends State<ScoreScreen> {
                                 mainAxisSize: MainAxisSize.min,
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Text(
-                                    _teamBName,
-                                    style: const TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.white70,
-                                      letterSpacing: 0.8,
+                                  Flexible(
+                                    child: Text(
+                                      _teamBName,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white70,
+                                        letterSpacing: 0.8,
+                                      ),
                                     ),
                                   ),
                                   const SizedBox(width: 4),
