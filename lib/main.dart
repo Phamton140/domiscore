@@ -660,6 +660,7 @@ class _ScoreScreenState extends State<ScoreScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       appBar: AppBar(
         title: const Text(
           'DOMISCORE',
