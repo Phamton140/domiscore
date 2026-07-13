@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -217,6 +218,14 @@ class _ScoreScreenState extends State<ScoreScreen> {
     });
     _saveState();
 
+    // Timer to automatically close the dialog after 3 seconds (coordinating with vibration)
+    bool isDismissed = false;
+    final dismissTimer = Timer(const Duration(seconds: 3), () {
+      if (!isDismissed && mounted) {
+        Navigator.of(context).pop();
+      }
+    });
+
     // 3. Show simple custom congratulatory dialog (tap-to-dismiss)
     showDialog(
       context: context,
@@ -226,7 +235,11 @@ class _ScoreScreenState extends State<ScoreScreen> {
           backgroundColor: Colors.transparent,
           insetPadding: const EdgeInsets.symmetric(horizontal: 40),
           child: GestureDetector(
-            onTap: () => Navigator.of(context).pop(),
+            onTap: () {
+              isDismissed = true;
+              dismissTimer.cancel();
+              Navigator.of(context).pop();
+            },
             behavior: HitTestBehavior.opaque,
             child: Container(
               padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 24),
@@ -295,6 +308,8 @@ class _ScoreScreenState extends State<ScoreScreen> {
         );
       },
     ).then((_) {
+      isDismissed = true;
+      dismissTimer.cancel();
       // 4. Reset points of current hand upon closing dialog
       _resetHandOnly();
     });
