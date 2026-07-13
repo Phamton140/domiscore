@@ -305,7 +305,7 @@ class _ScoreScreenState extends State<ScoreScreen> {
               TextField(
                 controller: controller,
                 autofocus: true,
-                maxLength: 10,
+                maxLength: 13,
                 style: const TextStyle(fontSize: 16, color: Colors.black87),
                 decoration: const InputDecoration(
                   counterText: "",
