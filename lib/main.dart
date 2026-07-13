@@ -158,15 +158,15 @@ class _ScoreScreenState extends State<ScoreScreen> {
     }
   }
 
-  // Vibration sequence for win
+  // Vibration sequence for win - approx 3 seconds
   Future<void> _triggerWinVibration() async {
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < 15; i++) {
       HapticFeedback.vibrate();
-      await Future.delayed(const Duration(milliseconds: 250));
+      await Future.delayed(const Duration(milliseconds: 200));
     }
   }
 
-  // Show winning dialog and add victory
+  // Show winning dialog and add victory (Matches user's screenshot)
   void _showWinDialog(String winnerTeam) {
     final isTeamA = winnerTeam == _teamAName;
     
@@ -181,40 +181,83 @@ class _ScoreScreenState extends State<ScoreScreen> {
 
     showDialog(
       context: context,
-      barrierDismissible: false,
+      barrierDismissible: true,
       builder: (context) {
-        return AlertDialog(
-          backgroundColor: Colors.white,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-          title: const Row(
-            children: [
-              Icon(Icons.emoji_events, color: Colors.amber, size: 28),
-              SizedBox(width: 8),
-              Text(
-                '¡Partida Terminada!',
-                style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87),
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 40),
+          child: GestureDetector(
+            onTap: () => Navigator.of(context).pop(),
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 24),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Color(0xFF8B5CF6), // Purple
+                    Color(0xFFD946EF), // Magenta
+                    Color(0xFFEF4444), // Red
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(28),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.3),
+                    blurRadius: 20,
+                    offset: const Offset(0, 10),
+                  ),
+                ],
               ),
-            ],
-          ),
-          content: Text(
-            'El equipo "$winnerTeam" ha alcanzado la meta de $_targetScore puntos y gana la partida.',
-            style: const TextStyle(fontSize: 16, color: Colors.black54),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                _resetHandOnly();
-              },
-              child: const Text(
-                'Nueva Partida',
-                style: TextStyle(color: Color(0xFF7C3AED), fontWeight: FontWeight.bold),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.emoji_events,
+                    color: Color(0xFFFFD700), // Gold Trophy
+                    size: 80,
+                  ),
+                  const SizedBox(height: 24),
+                  const Text(
+                    '¡FELICIDADES!',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white70,
+                      letterSpacing: 2.0,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    winnerTeam.toUpperCase(),
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 38,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.white,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'HA GANADO LA PARTIDA',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                      letterSpacing: 1.5,
+                    ),
+                  ),
+                ],
               ),
             ),
-          ],
+          ),
         );
       },
-    );
+    ).then((_) {
+      // Clean hand automatically when dialog is closed/dismissed
+      _resetHandOnly();
+    });
   }
 
   // Reset current scores (keep wins)
@@ -527,165 +570,84 @@ class _ScoreScreenState extends State<ScoreScreen> {
     );
   }
 
-  // Custom dialogue to sum points (Clean layout with presets)
+  // Dialog to sum points - Matches exactly "Cambiar Meta" dialog structure
   void _showSumPointsDialog(bool isTeamA) {
     final teamName = isTeamA ? _teamAName : _teamBName;
-    int enteredPoints = 0;
-    
-    showDialog(
-      context: context,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setModalState) {
-            return AlertDialog(
-              backgroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-              title: Text(
-                'Sumar puntos para $teamName',
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
-              ),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Points display
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF3F4F6),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    alignment: Alignment.center,
-                    child: Text(
-                      '$enteredPoints pts',
-                      style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                        color: isTeamA ? const Color(0xFF0F3CC9) : const Color(0xFF9F1239),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  // Preset buttons
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    alignment: WrapAlignment.center,
-                    children: [20, 25, 30, 40, 50, 75, 100].map((preset) {
-                      return SizedBox(
-                        height: 36,
-                        child: ElevatedButton(
-                          onPressed: () {
-                            setModalState(() {
-                              enteredPoints = preset;
-                            });
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFFF3F4F6),
-                            foregroundColor: Colors.black87,
-                            elevation: 0,
-                            padding: const EdgeInsets.symmetric(horizontal: 12),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                          ),
-                          child: Text('+$preset'),
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                  const SizedBox(height: 12),
-                  // Action buttons
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      TextButton(
-                        onPressed: () => setModalState(() => enteredPoints = 0),
-                        child: const Text('Limpiar', style: TextStyle(color: Colors.grey)),
-                      ),
-                      TextButton(
-                        onPressed: () async {
-                          final customVal = await _showCustomPointsKeyboard();
-                          if (customVal != null) {
-                            setModalState(() {
-                              enteredPoints = customVal;
-                            });
-                          }
-                        },
-                        child: const Text('Teclado', style: TextStyle(color: Color(0xFF7C3AED))),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-              actionsPadding: const EdgeInsets.only(right: 16, bottom: 16),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('CANCELAR', style: TextStyle(color: Color(0xFF7C3AED))),
-                ),
-                ElevatedButton(
-                  onPressed: enteredPoints <= 0
-                      ? null
-                      : () {
-                          _addScore(enteredPoints, isTeamA);
-                          Navigator.of(context).pop();
-                        },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: isTeamA ? const Color(0xFF1E6CDB) : const Color(0xFFD61E3C),
-                    foregroundColor: Colors.white,
-                    disabledBackgroundColor: Colors.grey.shade200,
-                    disabledForegroundColor: Colors.grey,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(100),
-                    ),
-                  ),
-                  child: const Text('SUMAR'),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
-
-  // Keyboard pop-up for custom scores
-  Future<int?> _showCustomPointsKeyboard() async {
     final controller = TextEditingController();
-    return showDialog<int>(
+
+    showDialog(
       context: context,
       builder: (context) {
         return AlertDialog(
           backgroundColor: Colors.white,
-          title: const Text('Puntos Personalizados'),
-          content: TextField(
-            controller: controller,
-            keyboardType: TextInputType.number,
-            autofocus: true,
-            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            decoration: const InputDecoration(
-              focusedBorder: UnderlineInputBorder(
-                borderSide: BorderSide(color: Color(0xFF7C3AED)),
-              ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+          title: Text(
+            'Sumar para $teamName',
+            style: const TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w500,
+              color: Colors.black87,
             ),
           ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: controller,
+                keyboardType: TextInputType.number,
+                autofocus: true,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                style: const TextStyle(fontSize: 16, color: Colors.black87),
+                decoration: const InputDecoration(
+                  suffixText: 'pts',
+                  suffixStyle: TextStyle(color: Colors.black54),
+                  focusedBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: Color(0xFF7C3AED), width: 2),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: Colors.black26),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          actionsPadding: const EdgeInsets.only(right: 16, bottom: 16),
           actions: [
             TextButton(
-              onPressed: () => Navigator.of(context).pop(null),
-              child: const Text('Cancelar', style: TextStyle(color: Colors.grey)),
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text(
+                'CANCELAR',
+                style: TextStyle(
+                  color: Color(0xFF7C3AED),
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
+              ),
             ),
-            TextButton(
+            ElevatedButton(
               onPressed: () {
-                final val = int.tryParse(controller.text);
-                Navigator.of(context).pop(val);
+                final parsed = int.tryParse(controller.text);
+                if (parsed != null && parsed > 0) {
+                  _addScore(parsed, isTeamA);
+                }
+                Navigator.of(context).pop();
               },
-              child: const Text('Aceptar', style: TextStyle(color: Color(0xFF7C3AED))),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFF3E8FF), // Light purple background
+                foregroundColor: const Color(0xFF7C3AED), // Dark purple text
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(100),
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              ),
+              child: const Text(
+                'SUMAR',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
+              ),
             ),
           ],
         );
@@ -711,7 +673,7 @@ class _ScoreScreenState extends State<ScoreScreen> {
         elevation: 0,
         scrolledUnderElevation: 0,
         actions: [
-          // Meta Button Pill (Matches Image 1)
+          // Meta Button Pill
           GestureDetector(
             onTap: _showEditTargetDialog,
             child: Container(
@@ -747,7 +709,7 @@ class _ScoreScreenState extends State<ScoreScreen> {
         child: Column(
           children: [
             const SizedBox(height: 12),
-            // Two Side-by-Side Gradient Cards (Matches Image 1)
+            // Two Side-by-Side Gradient Cards
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
               child: Row(
@@ -774,28 +736,33 @@ class _ScoreScreenState extends State<ScoreScreen> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         children: [
-                          // Team name with Pencil Edit Icon
+                          // Team name with Pencil Edit Icon (Enlarged hit target)
                           GestureDetector(
                             onTap: () => _showEditNameDialog(true),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(
-                                  _teamAName,
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white70,
-                                    letterSpacing: 0.8,
+                            behavior: HitTestBehavior.opaque,
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    _teamAName,
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white70,
+                                      letterSpacing: 0.8,
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(width: 4),
-                                const Icon(
-                                  Icons.edit,
-                                  color: Colors.white70,
-                                  size: 12,
-                                ),
-                              ],
+                                  const SizedBox(width: 4),
+                                  const Icon(
+                                    Icons.edit,
+                                    color: Colors.white70,
+                                    size: 12,
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                           // Huge Score
@@ -870,28 +837,33 @@ class _ScoreScreenState extends State<ScoreScreen> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         children: [
-                          // Team name with Pencil Edit Icon
+                          // Team name with Pencil Edit Icon (Enlarged hit target)
                           GestureDetector(
                             onTap: () => _showEditNameDialog(false),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(
-                                  _teamBName,
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white70,
-                                    letterSpacing: 0.8,
+                            behavior: HitTestBehavior.opaque,
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    _teamBName,
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white70,
+                                      letterSpacing: 0.8,
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(width: 4),
-                                const Icon(
-                                  Icons.edit,
-                                  color: Colors.white70,
-                                  size: 12,
-                                ),
-                              ],
+                                  const SizedBox(width: 4),
+                                  const Icon(
+                                    Icons.edit,
+                                    color: Colors.white70,
+                                    size: 12,
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                           // Huge Score
@@ -947,7 +919,7 @@ class _ScoreScreenState extends State<ScoreScreen> {
               ),
             ),
             const SizedBox(height: 24),
-            // White History Card Panel (Matches Image 1 & 2)
+            // White History Card Panel
             Expanded(
               child: Container(
                 width: double.infinity,
@@ -1048,7 +1020,6 @@ class _ScoreScreenState extends State<ScoreScreen> {
                                       child: Stack(
                                         alignment: Alignment.center,
                                         children: [
-                                          // Row layout content
                                           Row(
                                             children: [
                                               // Index column
@@ -1096,7 +1067,7 @@ class _ScoreScreenState extends State<ScoreScreen> {
                                                   ),
                                                 ),
                                               ),
-                                              // Action button (Matches Image 2)
+                                              // Action button
                                               SizedBox(
                                                 width: 60,
                                                 child: IconButton(
@@ -1105,8 +1076,8 @@ class _ScoreScreenState extends State<ScoreScreen> {
                                                         ? Icons.settings_backup_restore
                                                         : Icons.delete_outline,
                                                     color: entry.isDeleted
-                                                        ? const Color(0xFF10B981) // Green restore icon
-                                                        : const Color(0xFFF59E0B), // Orange trash icon
+                                                        ? const Color(0xFF10B981) // Green restore
+                                                        : const Color(0xFFF59E0B), // Orange delete
                                                     size: 22,
                                                   ),
                                                   onPressed: () => _toggleDeleteEntry(index),
@@ -1114,7 +1085,7 @@ class _ScoreScreenState extends State<ScoreScreen> {
                                               ),
                                             ],
                                           ),
-                                          // Full-row cross out line (Matches Image 2)
+                                          // Full-row cross out line
                                           if (entry.isDeleted)
                                             Positioned(
                                               left: 45,
@@ -1140,7 +1111,7 @@ class _ScoreScreenState extends State<ScoreScreen> {
                     ),
                     // Bottom actions row (Matches Image 1)
                     Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 16.0),
+                      padding: const EdgeInsets.symmetric(vertical: 20.0),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         children: [
@@ -1150,7 +1121,7 @@ class _ScoreScreenState extends State<ScoreScreen> {
                               children: [
                                 Icon(
                                   Icons.refresh,
-                                  color: Color(0xFFD97706), // Orange circular refresh
+                                  color: Color(0xFFD97706),
                                   size: 18,
                                 ),
                                 SizedBox(width: 4),
@@ -1172,7 +1143,7 @@ class _ScoreScreenState extends State<ScoreScreen> {
                               children: [
                                 Icon(
                                   Icons.delete_outline,
-                                  color: Color(0xFFEF4444), // Red delete icon
+                                  color: Color(0xFFEF4444),
                                   size: 18,
                                 ),
                                 SizedBox(width: 4),
@@ -1191,17 +1162,39 @@ class _ScoreScreenState extends State<ScoreScreen> {
                         ],
                       ),
                     ),
-                    // Developer footer
-                    const Text(
-                      'Desarrollado por Melquisedec Sarfeliz',
+                  ],
+                ),
+              ),
+            ),
+            // Dedicated AdMob Banner Space (Keeps the screen clean and standard sized)
+            Container(
+              width: double.infinity,
+              height: 60,
+              color: const Color(0xFFF3F4F6),
+              alignment: Alignment.center,
+              child: Container(
+                width: 320,
+                height: 50,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  border: Border.all(color: Colors.black12),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                alignment: Alignment.center,
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.ad_units, color: Colors.black26, size: 16),
+                    SizedBox(width: 6),
+                    Text(
+                      'ANUNCIO PUBLICITARIO',
                       style: TextStyle(
                         fontSize: 10,
-                        fontWeight: FontWeight.w500,
                         color: Colors.black26,
-                        letterSpacing: 0.2,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.5,
                       ),
                     ),
-                    const SizedBox(height: 12),
                   ],
                 ),
               ),
