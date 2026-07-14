@@ -278,19 +278,17 @@ class _ScoreScreenState extends State<ScoreScreen> {
             child: Container(
               padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 24),
               decoration: BoxDecoration(
-                gradient: const LinearGradient(
+                gradient: LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
-                  colors: [
-                    Color(0xFF8B5CF6), // Purple
-                    Color(0xFFD946EF), // Magenta
-                    Color(0xFFEF4444), // Red
-                  ],
+                  colors: isTeamA
+                      ? const [Color(0xFF0F3EBA), Color(0xFF1E6CDB)]
+                      : const [Color(0xFF9E0B24), Color(0xFFD91E36)],
                 ),
                 borderRadius: BorderRadius.circular(28),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.3),
+                    color: (isTeamA ? Colors.blue : Colors.red).withOpacity(0.3),
                     blurRadius: 20,
                     offset: const Offset(0, 10),
                   ),
