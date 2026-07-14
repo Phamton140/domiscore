@@ -94,5 +94,7 @@ flutter:
 flutter_launcher_icons:
   android: "launcher_icon"
   ios: true
-  image_path: "assets/domino_logo.jpeg"
+  image_path: "assets/domino_logo.png"
   min_sdk_android: 21
+  adaptive_icon_background: "#F23338"
+  adaptive_icon_foreground: "assets/domino_logo.png"
