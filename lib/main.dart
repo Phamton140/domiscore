@@ -6,10 +6,14 @@ import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'models/score_entry.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  MobileAds.instance.initialize();
-  SystemChrome.setPreferredOrientations([
+  try {
+    await MobileAds.instance.initialize();
+  } catch (e) {
+    debugPrint("Error initializing MobileAds: $e");
+  }
+  await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
   ]);
