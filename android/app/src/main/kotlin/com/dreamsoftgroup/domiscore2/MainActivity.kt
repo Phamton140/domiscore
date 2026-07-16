@@ -1,4 +1,4 @@
-package com.dreamsoftgroup.domiscore
+package com.dreamsoftgroup.domiscore2
 
 import io.flutter.embedding.android.FlutterActivity
 
