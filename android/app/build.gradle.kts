@@ -52,6 +52,8 @@ android {
             } else {
                 signingConfigs.getByName("debug")
             }
+            minifyEnabled = false
+            shrinkResources = false
         }
     }
 }
